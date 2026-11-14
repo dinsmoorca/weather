@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<script>window.WB_PUBLIC={"name": "GH Weather", "location": "hidden", "sha256": "95b79418d3aa27c5036fb47001014051b719a6ec93a2468a0050a6928abc4422"};</script><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WeatherBridge iPhone widget</title>
+<style>
+:root { color-scheme: dark; }
+body { margin: 0; background: #0b1116; color: #f2f5f4; font: 16px/1.5 -apple-system, "SF Pro Text", system-ui, sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+h1 { font-size: 22px; margin: 0 0 4px; } .sub { color: #aab6bb; margin: 0 0 18px; font-size: 14px; }
+ol { padding-left: 22px; } li { margin: 0 0 12px; } b { color: #fff; }
+.btn { display: inline-block; background: #e8834a; color: #111; font-weight: 700; border: 0; border-radius: 10px; padding: 12px 18px; font-size: 16px; cursor: pointer; }
+.btn.alt { background: #22343f; color: #f2f5f4; }
+.ok { color: #8fd18f; margin-left: 10px; font-size: 14px; }
+pre { background: #111a20; border: 1px solid #22323c; border-radius: 8px; padding: 10px; font-size: 11px; max-height: 220px; overflow: auto; white-space: pre-wrap; color: #cfd8dc; }
+.note { color: #aab6bb; font-size: 14px; } a { color: #7fb8ff; }
+</style></head><body><main>
+<h1>iPhone widget</h1>
+<p class="sub" id="sub">Your WeatherBridge station on the Home Screen and Lock Screen, using the free <b>Scriptable</b> app.</p>
+<ol>
+  <li>Install <b>Scriptable</b> from the App Store (free, by Simon B. Støvring).</li>
+  <li>On this page, on the iPhone: <button class="btn" id="copy">Copy the widget script</button><span class="ok" id="ok"></span></li>
+  <li>Open Scriptable → <b>+</b> (top right) → paste → tap the title at the top and name it <b>WeatherBridge</b> → Done.
+      Tap the script once to try it (it shows the medium widget).</li>
+  <li>Home Screen: touch and hold an empty spot → <b>Edit</b> → <b>Add Widget</b> → Scriptable → choose <b>Small</b> or <b>Medium</b> → Add Widget.
+      Then touch and hold the new widget → <b>Edit Widget</b> → Script: <b>WeatherBridge</b>.</li>
+  <li>Lock Screen: touch and hold the Lock Screen → <b>Customize</b> → Lock Screen → tap the widget area (rectangular) or the line above the
+      clock (one line) → Scriptable → then tap it again and choose Script: <b>WeatherBridge</b>.</li>
+  <li><b>Radar widgets (2.14):</b> in the widget's settings (touch and hold → <b>Edit Widget</b>), type <b>radar</b> in the <b>Parameter</b> field.
+      On the Lock Screen (rectangular) it shows the radar <span class="home-only">around home</span><span class="pub-only" hidden>for Michigan</span> in white shades — iOS shows Lock Screen widgets without colour.
+      On the Home Screen choose <b>Small</b>, <b>Medium</b> or <b>Large</b> (iPad: also <b>Extra Large</b>) for colour radar. Each picture shows its radar time.</li>
+  <li><b>iPad Lock Screen, larger (2.14.1):</b> turn the iPad sideways, touch and hold the Lock Screen → <b>Customize</b> → Lock Screen → <b>Add Widgets</b>
+      on the left → Scriptable → the <b>square</b> size. Then choose Script <b>WeatherBridge</b> and type <b>radar lock</b> in the Parameter field.</li>
+</ol>
+<p class="note pub-only" hidden>The widget reads this public weather page over the internet (<b id="pubHere"></b>); nothing on your
+phone or network is shared with the station. iOS decides how often widgets refresh, typically every 15–60 minutes; tap the widget to open the full page.</p>
+<p class="note pub-only" hidden>Script fingerprint (SHA-256): <code id="sha" style="word-break:break-all"></code> <span id="shaOk"></span><br>
+The station's owner can confirm this code; if it differs from what they have, do not use the script.</p>
+<p class="note home-only">The widget reads this station over your home Wi-Fi (<span id="host"></span>).<span id="pubNote" hidden> Away from home it reads
+the public copy at <b id="pubUrl"></b>.</span> If neither can be reached it keeps the last reading and says "away". iOS decides how often widgets refresh, typically every 15–60 minutes; tap the widget to open the full console.
+<span class="home-only">If your phone cannot find <i>weatherbridge.local</i>, put the station's address (for example 192.168.1.50) in the widget's <b>Parameter</b> field (add <b>radar</b> after it for a radar widget: <code>192.168.1.50 radar</code>).</span></p>
+<p><button class="btn alt" id="show">Show the script</button> <a href="WeatherBridge-widget.js" download>Download it</a> · <a href="./">Back to the weather page</a></p>
+<pre id="code" hidden></pre>
+</main>
+<script>
+(async function () {
+  const PUB = window.WB_PUBLIC || null;        // 2.14.2: set only on the public copy (GitHub Pages)
+  document.getElementById("host").textContent = location.host || "weatherbridge.local";
+  let code = "";
+  try { code = await (await fetch("WeatherBridge-widget.js", { cache: "no-store" })).text(); } catch (e) { code = ""; }
+  const pre = document.getElementById("code"); pre.textContent = code || "Could not load the script.";
+  if (PUB) {                                    // public copy: the script already reads only this page; show its fingerprint
+    document.querySelectorAll(".home-only").forEach((e) => { e.hidden = true; });
+    document.querySelectorAll(".pub-only").forEach((e) => { e.hidden = false; });
+    document.getElementById("sub").textContent = (PUB.name || "This weather station") + " on your iPhone or iPad Home Screen and Lock Screen, using the free Scriptable app.";
+    document.getElementById("pubHere").textContent = location.origin + location.pathname.replace(/[^/]*$/, "");
+    document.getElementById("sha").textContent = PUB.sha256 || "";
+    try {
+      const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
+      const hex = [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      document.getElementById("shaOk").textContent = hex === PUB.sha256 ? "✓ matches the script below" : "✗ does NOT match the script below";
+      document.getElementById("shaOk").style.color = hex === PUB.sha256 ? "#8fd18f" : "#ff8a7a";
+    } catch (e) { /* no crypto in this browser */ }
+  }
+  // The script's default address is weatherbridge.local; when this page was opened by another name or address, use that.
+  const h = location.hostname;
+  if (!PUB && code && h && h !== "weatherbridge.local" && h !== "localhost" && h !== "127.0.0.1")
+    code = code.replace('|| "weatherbridge.local").replace(', '|| "' + location.host + '").replace(');
+  // 2.13: when the station publishes a public copy, the widget reads it away from home
+  if (!PUB) try {
+    const p = await (await fetch("/api/publish", { cache: "no-store" })).json();
+    if (p && p.url) {
+      code = code.replace('const PUBLIC_URL = "";', 'const PUBLIC_URL = "' + p.url + '";');
+      document.getElementById("pubNote").hidden = false; document.getElementById("pubUrl").textContent = p.url;
+    }
+  } catch (e) { /* no public copy */ }
+  if (code) pre.textContent = code;           // show the script exactly as it will be copied
+  document.getElementById("copy").onclick = async () => {
+    const ok = document.getElementById("ok");
+    // The station is plain http (not https), where Safari has no navigator.clipboard; the older copy command works
+    // there inside a tap. Last resort: select the script so the user can tap Copy.
+    let done = false;
+    if (navigator.clipboard && window.isSecureContext) { try { await navigator.clipboard.writeText(code); done = true; } catch (e) { done = false; } }
+    if (!done) {
+      const ta = document.createElement("textarea"); ta.value = code; ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px";
+      document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, code.length);
+      try { done = document.execCommand("copy"); } catch (e) { done = false; }
+      ta.remove();
+    }
+    if (done) ok.textContent = "Copied ✓";
+    else {
+      pre.hidden = false; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      ok.textContent = "Selected: tap Copy";
+    }
+  };
+  document.getElementById("show").onclick = () => { pre.hidden = !pre.hidden; };
+})();
+</script>
+</body></html>
